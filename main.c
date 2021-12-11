@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <SDL2\SDL.h>
+#include "SDL2\SDL.h"
 
 #include "noise.h"
 
@@ -11,7 +11,7 @@
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int SIZE = 4;
-const int FPS = 50;
+const int FPS = 30;
 
 
 // Custum struct
@@ -117,10 +117,23 @@ int main(int argc, char* argv[]) {
 
     // Civilization variables
     Civilization* civ = NULL;
-    int creation_chance = 3 * FPS;  // per second
-    int expansion_speed = 1 * FPS / 2;  // per second
+    int creation_chance = 20;  // 1 is 100% every frame
+    int expansion_speed = 4;  // 0 is expansion every frame
     int expansion_counter = 0;
     int civ_id = 1;
+
+    // User parameters
+    if (argc == 3) {
+        int c_c = atoi(argv[1]);
+        int e_s = atoi(argv[2]);
+
+        if (c_c && e_s) {
+            creation_chance = c_c;
+            expansion_speed = e_s-1;
+        }
+        else printf("Invalid parameters, useing default.\n\n");
+    }
+    else printf("Incorrect number of parameters, useing default.\n\n");
 
     // Civilization id map
     int civ_map_id[rows][columns];
@@ -201,6 +214,8 @@ int main(int argc, char* argv[]) {
             expansion_counter = 0;
 
             Civilization* exp_civ = civ;
+            bool end = exp_civ == NULL ? false : true;
+
             while (exp_civ != NULL) {
                 
                 int row = exp_civ->x;
@@ -217,6 +232,7 @@ int main(int argc, char* argv[]) {
                             civ_map_id[i][j] = civ_map_id[row][col];
                             civ_map_color[i][j] = exp_civ->color;
                             expanded = true;
+                            end = false;
                         }
                     }
                 }
@@ -224,6 +240,47 @@ int main(int argc, char* argv[]) {
                 else exp_civ->expance = 0;
 
                 exp_civ = exp_civ->next;
+            }
+            // End of simulatiom
+            if (end) {
+                
+                int largest_space = 0;
+                int average_space = 0;
+                int smallest_space = rows*columns;
+
+                int civilization_space[civ_id];
+                for (int i=0; i<civ_id; i++) {
+                    civilization_space[i] = 0;
+                }
+
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < columns; col++) {
+                        civilization_space[civ_map_id[row][col]-1]++;
+                    }
+                }
+
+                printf("\nSIMULATION OVER\n");
+                printf("Number of civilizations: %d\n\n", civ_id-1);
+
+                for (int i=0; i<civ_id-1; i++) {
+                    printf("Civilization %d of size: %d\n", i+1, civilization_space[i]);
+                    if (civilization_space[i] > largest_space) largest_space = civilization_space[i];
+                    average_space += civilization_space[i];
+                    if (civilization_space[i] < smallest_space) smallest_space = civilization_space[i];
+                }
+                printf("\n");
+
+                printf("Largest civilization size: %d\n", largest_space);
+                printf("Average civilization size: %d\n", average_space/civ_id);
+                printf("Smallest civilization size: %d\n", smallest_space);
+                printf("\n");
+
+                if (expansion_speed == 0) printf("Civilization expansion speed: c\n");
+                else printf("Civilization expansion speed: c / %d\n", expansion_speed+1);
+                printf("Civilization creation chance: %.2f per second\n", (float)creation_chance / (float)FPS);
+                printf("\n");
+
+                running = false;
             }
         }
         else expansion_counter++;
